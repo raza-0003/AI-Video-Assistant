@@ -125,17 +125,3 @@ docker compose up --build
 - Rate limiting, structured logging (zap/zerolog), and unit/API tests are
   not included in this scaffold yet
 - `go mod tidy` needs to run with real internet access to the Go module proxy
-
-## Honest resume framing
-
-Rather than presenting this as fully original, a framing like this holds up
-under interview questions and is arguably a *better* signal than pretending
-otherwise:
-
-> Built a multi-user backend platform around an open-source audio/RAG
-> pipeline — designed the data model, JWT auth, async job processing with
-> Redis/Asynq, REST API, and Swagger docs; containerized the full stack with
-> Docker Compose.
-
-That story is defensible for 30–40 minutes of questioning, because every
-piece of it is something you can actually explain the tradeoffs of.
