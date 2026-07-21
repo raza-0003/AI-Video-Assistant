@@ -1,0 +1,19 @@
+# Environment
+.env
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Generated data
+python-service/downloades/
+python-service/vector_db/
+
+# Build output
+dist/
+build/
