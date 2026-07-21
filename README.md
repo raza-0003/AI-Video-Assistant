@@ -4,21 +4,6 @@ A production-style backend built around an existing Python meeting-intelligence
 pipeline (audio ingestion → Whisper transcription → Mistral summarization/
 extraction → Chroma RAG chat).
 
-**Attribution:** the core AI pipeline (`python-service/core`, `python-service/utils`)
-is adapted from [AkarshVyas/AI-Video-Assistant-](https://github.com/AkarshVyas/AI-Video-Assistant-),
-originally a single-user Streamlit app. Everything in `cmd/`, `internal/`,
-`migrations/`, and `python-service/service.py` — the multi-user backend,
-auth, async job queue, persistence, storage, and API layer — is new work
-built on top of it.
-
-## What changed vs. the original
-
-The original project was a Streamlit script: one process, no accounts, no
-persistence, synchronous processing that blocks the UI thread while Whisper
-and Mistral run.
-
-This version turns it into a multi-user platform:
-
 | Original | This version |
 |---|---|
 | No auth | JWT-based register/login |
