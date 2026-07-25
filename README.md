@@ -1,112 +1,107 @@
-# AI Video Assistant — Backend Platform
+# AI Video Assistant
 
-A production-style backend built around an existing Python meeting-intelligence
-pipeline (audio ingestion → Whisper transcription → Mistral summarization/
-extraction → Chroma RAG chat).
+An AI-powered meeting assistant that processes YouTube videos or uploaded recordings, generates transcripts and summaries, extracts action items, and allows users to chat with the meeting using Retrieval-Augmented Generation (RAG).
 
-| Original | This version |
-|---|---|
-| No auth | JWT-based register/login |
-| No persistence | Postgres: users, videos, chat history |
-| Synchronous, blocks UI | Redis + Asynq background job queue |
-| `"Generating..."` spinner | Live progress percentage, polled from DB |
-| Local Chroma dir only | Pluggable S3 storage layer |
-| No API | REST API + Swagger docs at `/docs` |
-| Single Python process | Go API + Go worker + isolated Python ML microservice |
+## Features
+
+- User authentication with JWT
+- Upload YouTube links for processing
+- Background job processing using Redis + Asynq
+- Live processing progress updates
+- Meeting transcript and summary generation
+- Action item extraction
+- Chat with processed meetings using RAG
+- Dashboard showing processing statistics
+- REST APIs with Swagger documentation
+
+---
+
+## Tech Stack
+
+### Backend
+- Go
+- Chi Router
+- PostgreSQL
+- Redis
+- Asynq
+- JWT Authentication
+- AWS SDK (S3 integration)
+
+### AI Service
+- Python
+- FastAPI
+- Whisper
+- LangChain
+- Mistral AI
+- ChromaDB
+
+### Frontend
+- React
+- Vite
+
+---
 
 ## Architecture
 
 ```
-                     ┌──────────────┐
-   Client / Frontend │              │
-   ─────────────────▶│  Go API      │──┐
-   (REST, JWT)        │  (chi)       │  │ enqueue job
-                     └──────┬───────┘  │
-                            │ Postgres  ▼
-                            │        ┌────────┐
-                            │        │ Redis  │
-                            │        │ Asynq  │
-                            │        └───┬────┘
-                            ▼            │ consume
-                     ┌──────────────┐    ▼
-                     │  Postgres    │ ┌──────────────┐
-                     │  users       │ │  Go Worker    │
-                     │  videos      │ │              │
-                     │  chat_msgs   │ └──────┬───────┘
-                     └──────────────┘        │ HTTP
-                                              ▼
-                                    ┌──────────────────┐
-                                    │ Python Service    │
-                                    │ (FastAPI)         │
-                                    │ yt-dlp/pydub      │
-                                    │ Whisper            │
-                                    │ Mistral (LangChain)│
-                                    │ Chroma vector store │
-                                    └──────────────────┘
+React Frontend
+       │
+       ▼
+    Go REST API
+       │
+       ├────────► PostgreSQL
+       │
+       ├────────► Redis Queue
+       │
+       ▼
+    Go Worker
+       │
+       ▼
+Python FastAPI Service
+       │
+       ├── Whisper
+       ├── Mistral AI
+       └── ChromaDB
 ```
 
-The Go API never talks to Whisper/Mistral/Chroma directly — it enqueues a job,
-the worker calls the Python service over HTTP, and results/progress are
-written back to Postgres. This is the standard pattern for wrapping a
-Python ML pipeline behind a real backend instead of rewriting the ML code
-in Go.
+The Go backend is responsible for authentication, APIs, database operations, and job scheduling. Long-running AI tasks are executed by a separate Python service through background workers, keeping API requests responsive.
 
-## Stack
+---
 
-- **Go** (chi router, pgx, JWT, Asynq, AWS SDK v2)
-- **PostgreSQL** — users, videos, chat history
-- **Redis + Asynq** — background job queue for long-running pipeline jobs
-- **AWS S3** — planned artifact storage (transcripts, exports)
-- **Swagger** (swaggo) — API docs at `/docs/index.html`
-- **Docker Compose** — one-command local environment
-- **Python/FastAPI** — thin wrapper around the original transcription/RAG pipeline
-
-## Frontend
-
-A React (Vite) UI lives in `frontend/` — login/register, a dashboard to submit
-meetings and watch live progress, and a per-meeting page with summary, action
-items, and RAG chat.
-
-```bash
-cd frontend
-npm install
-cp .env.example .env    # points at http://localhost:8080 by default
-npm run dev
-```
-
-Open `http://localhost:5173`. It talks to the Go API directly over REST — no
-proxy needed, CORS is already open on the API side.
-
-## Running locally
+## Running the Project
 
 ```bash
 cp .env.example .env
-# fill in MISTRAL_API_KEY at minimum
 
 docker compose up --build
 ```
 
-- API: `http://localhost:8080` (health check: `/health`, docs: `/docs/index.html`)
-- Python pipeline service: `http://localhost:8000`
+Services:
 
-## API overview
+- Go API → http://localhost:8080
+- Swagger → http://localhost:8080/docs/index.html
+- Python Service → http://localhost:8000
+- React Frontend → http://localhost:5173
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | — | Create account |
-| POST | `/api/v1/auth/login` | — | Get JWT |
-| POST | `/api/v1/videos` | ✅ | Submit YouTube URL/file for processing (enqueues job) |
-| GET | `/api/v1/videos` | ✅ | Video history for the current user |
-| GET | `/api/v1/videos/{id}` | ✅ | Status, progress %, and results for one video |
-| POST | `/api/v1/videos/{id}/chat` | ✅ | Ask a question about a processed video (RAG) |
-| GET | `/api/v1/videos/{id}/chat` | ✅ | Chat history for that video |
-| GET | `/api/v1/dashboard/stats` | ✅ | Total / processing / completed / failed counts |
+---
 
-## Not yet wired up (next steps)
+## API Endpoints
 
-- Swagger doc comments are in place but need `swag init` run to generate `docs/`
-- S3 upload of transcripts is scaffolded (`internal/storage/s3.go`) but not
-  yet called from the worker — currently transcripts stay in Postgres
-- Rate limiting, structured logging (zap/zerolog), and unit/API tests are
-  not included in this scaffold yet
-- `go mod tidy` needs to run with real internet access to the Go module proxy
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| POST | /api/v1/auth/register | Register user |
+| POST | /api/v1/auth/login | Login |
+| POST | /api/v1/videos | Submit video |
+| GET | /api/v1/videos | Video history |
+| GET | /api/v1/videos/{id} | Processing status |
+| POST | /api/v1/videos/{id}/chat | Chat with meeting |
+| GET | /api/v1/dashboard/stats | Dashboard statistics |
+
+---
+
+## Future Improvements
+
+- Store transcripts in AWS S3
+- Add rate limiting
+- Improve logging
+- Add unit and integration tests
